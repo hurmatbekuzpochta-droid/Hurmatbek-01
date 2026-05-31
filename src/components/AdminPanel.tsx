@@ -60,6 +60,16 @@ interface AdminPanelProps {
   payments: PaymentLog[];
   logs: SecurityLog[];
   news: NewsItem[];
+  authSettings: {
+    googleLoginEnabled: boolean;
+    googleAuthenticatorEnabled: boolean;
+    allowedAdmins: string[];
+  };
+  onUpdateAuthSettings: (settings: {
+    googleLoginEnabled: boolean;
+    googleAuthenticatorEnabled: boolean;
+    allowedAdmins: string[];
+  }) => void;
   
   onUpdateChannels: (ch: TVChannel[]) => void;
   onUpdateMovies: (m: Movie[]) => void;
@@ -70,6 +80,12 @@ interface AdminPanelProps {
   onUpdateUsers: (u: User[]) => void;
   onUpdateNews: (n: NewsItem[]) => void;
   onLogAction: (msg: string, level: "INFO" | "WARNING" | "CRITICAL") => void;
+  siteWords: {
+    uz: Record<string, string>;
+    ru: Record<string, string>;
+    en: Record<string, string>;
+  };
+  onUpdateSiteWords: (words: any) => void;
 }
 
 export default function AdminPanel({
@@ -84,6 +100,8 @@ export default function AdminPanel({
   payments,
   logs,
   news,
+  authSettings,
+  onUpdateAuthSettings,
   onUpdateChannels,
   onUpdateMovies,
   onUpdateSeries,
@@ -92,14 +110,55 @@ export default function AdminPanel({
   onUpdateSettings,
   onUpdateUsers,
   onUpdateNews,
-  onLogAction
+  onLogAction,
+  siteWords,
+  onUpdateSiteWords
 }: AdminPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<
-    "dash" | "tv" | "movies" | "series" | "users" | "plans" | "ads" | "news" | "security" | "settings" | "php_export"
+    "dash" | "tv" | "movies" | "series" | "users" | "plans" | "ads" | "news" | "security" | "settings" | "words" | "php_export"
   >("dash");
 
   // Selection states
   const [editingChannel, setEditingChannel] = useState<TVChannel | null>(null);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+
+  const handleAddAdminEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailStr = newAdminEmail.trim().toLowerCase();
+    if (!emailStr) return;
+    if (!emailStr.includes("@") || !emailStr.includes(".")) {
+      alert("Iltimos to'g'ri elektron pochta manzilini kiriting!");
+      return;
+    }
+    if (authSettings.allowedAdmins.includes(emailStr)) {
+      alert("Ushbu foydalanuvchi allaqachon adminlar ro'yxatida mavjud!");
+      return;
+    }
+    const updatedAllowed = [...authSettings.allowedAdmins, emailStr];
+    onUpdateAuthSettings({
+      ...authSettings,
+      allowedAdmins: updatedAllowed
+    });
+    setNewAdminEmail("");
+    onLogAction(`Yangi admin ruxsatnomasi qo'shildi: ${emailStr}`, "INFO");
+    alert(`Yangi admin (${emailStr}) muvaffaqiyatli ruxsat etilganlar ro'yxatiga qo'shildi!`);
+  };
+
+  const handleRemoveAdminEmail = (emailToRemove: string) => {
+    if (emailToRemove === "hurmatbekuzpochta@gmail.com") {
+      alert("Asosiy tizim egasini ruxsatnomalar ro'yxatidan o'chirib bo'lmaydi!");
+      return;
+    }
+    if (!confirm(`Siz rostdan ham ${emailToRemove} ni adminlar safidan o'chirmoqchimisiz?`)) {
+      return;
+    }
+    const updatedAllowed = authSettings.allowedAdmins.filter(email => email !== emailToRemove);
+    onUpdateAuthSettings({
+      ...authSettings,
+      allowedAdmins: updatedAllowed
+    });
+    onLogAction(`Admin tizimidan o'chirildi: ${emailToRemove}`, "WARNING");
+  };
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
   const [editingSeries, setEditingSeries] = useState<Series | null>(null);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
@@ -549,6 +608,17 @@ export default function AdminPanel({
             <ChevronRight size={12} className="opacity-40" />
           </button>
 
+          <button
+            onClick={() => setActiveSubTab("words")}
+            className={`w-full text-left px-4 py-2 rounded text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${activeSubTab === "words" ? "bg-cyan-950 text-cyan-400 border-l-2 border-cyan-400" : "text-gray-400 hover:bg-cyan-950/20 hover:text-white"}`}
+          >
+            <span className="flex items-center space-x-2">
+              <Globe size={14} className="text-cyan-400" />
+              <span>Sayt So'zlari (Translation)</span>
+            </span>
+            <ChevronRight size={12} className="opacity-40" />
+          </button>
+
           {/* PHP PRODUCTION EXPORTER */}
           <button
             onClick={() => setActiveSubTab("php_export")}
@@ -592,7 +662,9 @@ export default function AdminPanel({
 
                 <div className="p-4 rounded-xl border border-cyan-900 bg-cyan-950/10 text-left">
                   <p className="text-gray-500 font-bold uppercase text-[9px] tracking-widest">Jami moliyaviy aylanma</p>
-                  <p className="text-2xl font-mono font-black text-emerald-400 mt-1">1,540,000 UZS</p>
+                  <p className="text-2xl font-mono font-black text-emerald-400 mt-1">
+                    {payments.reduce((acc, p) => p.status === "success" ? acc + p.amountUzS : acc, 0).toLocaleString()} UZS
+                  </p>
                   <div className="text-[10px] text-gray-400 mt-1.5">
                     Bu oydagi muvaffaqiyatli tranzatsiyalar: <span className="text-white font-bold">{payments.filter(p => p.status === "success").length} ta</span>
                   </div>
@@ -1111,31 +1183,116 @@ export default function AdminPanel({
 
           {/* G. SECURITY CONTROLS AND FIREWALL LOGGER */}
           {activeSubTab === "security" && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <h3 className="text-white font-display font-extrabold text-base uppercase tracking-wider text-cyan-400 border-b border-gray-950 pb-3">
-                🛡️ Tizim Xavfsizlik Sensorlari & SQL Xatoliklari Logi
+                🛡️ Markaziy Xavfsizlik & 2FA Kirish Sozlamalari
               </h3>
 
-              <p className="text-[11px] text-gray-400 leading-normal">
-                HTV xavfsizlik daxlsizligi yuqori! SQL Injection, Cross-Site Scripting (XSS), hamda ruxsatsiz backend so'rovlarni avtomatik aniqlash tizimi loglari quyida tasvirlanadi:
-              </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                
+                {/* COLUMN 1: INTERACTIVE KEY CONFIGS & ADMINS MANAGEMENT */}
+                <div className="space-y-5 bg-black/40 border border-cyan-950/60 p-4 rounded-xl">
+                  <div className="space-y-1">
+                    <h4 className="text-white font-bold text-xs uppercase tracking-wider text-gray-300">🔐 Kirish Usullari (2FA Sozlamalari)</h4>
+                    <p className="text-[10px] text-gray-500">Tizimga kirish bo'limida majburiy tekshiruv va ruxsat berish usullari:</p>
+                  </div>
 
-              <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
-                {logs.map((log) => (
-                  <div key={log.id} className="p-3 rounded bg-black/60 border border-gray-950 text-xs font-mono space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-cyan-400 font-bold">{log.timestamp}</span>
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold ${log.level === "CRITICAL" ? "bg-red-950 text-red-500" : log.level === "WARNING" ? "bg-amber-950 text-amber-500" : "bg-cyan-950 text-cyan-400"}`}>
-                        {log.level}
+                  <div className="space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateAuthSettings({ ...authSettings, googleLoginEnabled: !authSettings.googleLoginEnabled })}
+                      className={`w-full py-2.5 px-4 rounded text-xs font-bold flex items-center justify-between border cursor-pointer transition-all ${authSettings.googleLoginEnabled ? 'bg-cyan-950/30 text-cyan-400 border-cyan-500/20' : 'bg-gray-900 border-transparent text-gray-500'}`}
+                    >
+                      <span>Google Akkaunt talab qilish (Gg Login)</span>
+                      <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-black ${authSettings.googleLoginEnabled ? 'bg-cyan-500 text-black' : 'bg-gray-800 text-gray-500'}`}>
+                        {authSettings.googleLoginEnabled ? "Yoqilgan (Faol)" : "O'chirilgan"}
                       </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onUpdateAuthSettings({ ...authSettings, googleAuthenticatorEnabled: !authSettings.googleAuthenticatorEnabled })}
+                      className={`w-full py-2.5 px-4 rounded text-xs font-bold flex items-center justify-between border cursor-pointer transition-all ${authSettings.googleAuthenticatorEnabled ? 'bg-cyan-950/30 text-cyan-400 border-cyan-500/20' : 'bg-gray-900 border-transparent text-gray-500'}`}
+                    >
+                      <span>Google Authenticator (6 xonali kod)</span>
+                      <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-black ${authSettings.googleAuthenticatorEnabled ? 'bg-cyan-500 text-black' : 'bg-gray-800 text-gray-500'}`}>
+                        {authSettings.googleAuthenticatorEnabled ? "Majburiy" : "Ixtiyoriy"}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* ADMINS MANAGEMENT MODULE */}
+                  <div className="border-t border-cyan-950/50 pt-4 space-y-3">
+                    <div className="space-y-1">
+                      <h4 className="text-white font-bold text-xs uppercase tracking-wider text-gray-300">👥 Qo'shimcha Adminlar Ro'yxati</h4>
+                      <p className="text-[10px] text-gray-500">Google va parol orqali faqatgina ushbu ruxsat etilgan Gmail profil egalari admin panelga kira oladilar:</p>
                     </div>
-                    <p className="text-gray-200">{log.message}</p>
-                    <div className="flex justify-between text-[10px] text-gray-600">
-                      <span>IP Address: {log.ipAddress}</span>
-                      {log.userEmail && <span>User: {log.userEmail}</span>}
+
+                    <form onSubmit={handleAddAdminEmail} className="flex gap-2">
+                      <input
+                        type="email"
+                        required
+                        placeholder="masalan, yangiadmin@gmail.com"
+                        value={newAdminEmail}
+                        onChange={(e) => setNewAdminEmail(e.target.value)}
+                        className="flex-1 bg-black border border-cyan-950 rounded px-3 py-2 text-xs text-white"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs rounded transition-all cursor-pointer shadow"
+                      >
+                        Qo'shish
+                      </button>
+                    </form>
+
+                    <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                      {authSettings.allowedAdmins.map(email => (
+                        <div key={email} className="p-2.5 rounded bg-black/50 flex items-center justify-between text-xs border border-cyan-950/20">
+                          <span className="font-mono text-cyan-400 font-bold tracking-wide">{email}</span>
+                          {email !== "hurmatbekuzpochta@gmail.com" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAdminEmail(email)}
+                              className="p-1 hover:text-red-500 text-gray-500 cursor-pointer"
+                              title="Tizimdan o'chirish"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          ) : (
+                            <span className="text-[9px] bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded uppercase font-black tracking-widest border border-cyan-900">Asosiy</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {/* COLUMN 2: SECURITY FIREWALL LOGS */}
+                <div className="space-y-4 bg-black/20 border border-cyan-950/40 p-4 rounded-xl">
+                  <div className="space-y-1">
+                    <h4 className="text-white font-bold text-xs uppercase tracking-wider text-cyan-400">🛡️ Tizim Xavfsizlik Sensorlari & SQL Xatoliklari Logi</h4>
+                    <p className="text-[10px] text-gray-500">SQL Injection, Cross-Site Scripting (XSS) hamda ruxsatsiz so'rovlarni avtomatik aniqlash tizimi qaydlari:</p>
+                  </div>
+
+                  <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                    {logs.map((log) => (
+                      <div key={log.id} className="p-3 rounded bg-black/60 border border-cyan-950/20 text-xs font-mono space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-cyan-400 font-bold">{log.timestamp}</span>
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold ${log.level === "CRITICAL" ? "bg-red-950 text-red-500 border border-red-900/30" : log.level === "WARNING" ? "bg-amber-950 text-amber-500 border border-amber-900/30" : "bg-cyan-950 text-cyan-400"}`}>
+                            {log.level}
+                          </span>
+                        </div>
+                        <p className="text-gray-300 leading-normal">{log.message}</p>
+                        <div className="flex justify-between text-[9px] text-gray-500 pt-1 border-t border-cyan-950/15">
+                          <span>IP Address: {log.ipAddress}</span>
+                          {log.userEmail && <span>Pochta: {log.userEmail}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
@@ -1170,6 +1327,140 @@ export default function AdminPanel({
                 </button>
               </div>
             </form>
+          )}
+
+          {/* SITES WORDS & TRANSLATION REPAIR EDITOR TAB */}
+          {activeSubTab === "words" && (
+            <div className="space-y-4 text-xs text-left">
+              <div className="border-b border-gray-950 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-white font-display font-extrabold text-base uppercase tracking-wider text-cyan-400">
+                    🗣️ Sayt So'zlarini va Tarjimalarini Tahrirlash
+                  </h3>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Bu yerdan saytdagi barcha yozuvlarni, sarlavhalarni, va tarjimalardagi imlo xatolarini to'g'irlashingiz yoki o'zgartirishingiz mumkin.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const confirmReset = window.confirm("Tarjimalarni standart holatiga qaytarishni xohlaysizmi?");
+                    if (confirmReset) {
+                      localStorage.removeItem("site_words");
+                      window.location.reload();
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded border border-red-900/60 bg-red-950/20 text-red-400 hover:bg-red-950/40 font-bold text-[10px] uppercase cursor-pointer"
+                >
+                  Barchasini asliga qaytarish
+                </button>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const target = e.currentTarget;
+                  const newWords = {
+                    uz: {} as Record<string, string>,
+                    ru: {} as Record<string, string>,
+                    en: {} as Record<string, string>
+                  };
+
+                  Object.keys(siteWords.uz).forEach((key) => {
+                    newWords.uz[key] = (target.elements.namedItem(`uz_${key}`) as HTMLInputElement)?.value || "";
+                    newWords.ru[key] = (target.elements.namedItem(`ru_${key}`) as HTMLInputElement)?.value || "";
+                    newWords.en[key] = (target.elements.namedItem(`en_${key}`) as HTMLInputElement)?.value || "";
+                  });
+
+                  onUpdateSiteWords(newWords);
+                  onLogAction("Admin sayt so'zlarini va tarjimalarni muvaffaqiyatli tahrirladi", "INFO");
+                  alert("Ajoyib! Saytdagi barcha yozuvlar va imlo xatolari muvaffaqiyatli yangilandi va saqlandi.");
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-3.5 max-h-[550px] overflow-y-auto pr-2">
+                  {Object.keys(siteWords.uz).map((key) => {
+                    const keyDescriptions: Record<string, string> = {
+                      nowOn: "Tavsiya etilgan oqimlar sarlavhasi",
+                      viewAll: "Barchasini ko'rish tugmasi",
+                      searchHint: "Qidiruv maydonchasi ichki matni",
+                      heroAction: "Bosh ekrandagi tomosha qilish tugmasi",
+                      lockedCard: "Premium (Qulflangan) belgisi",
+                      freeCard: "Bepul belgisi",
+                      scheduleTitle: "Bugungi ko'rsatuvlar sarlavhasi",
+                      sportsTitle: "Jonli sport o'yinlari sarlavhasi",
+                      newsTitle: "Yangiliklar sarlavhasi",
+                      moviesHeader: "Filmlar rukni sarlavhasi",
+                      tvHeader: "Jonli efir kanallari sarlavhasi",
+                      favoritesHeader: "Sevimlilar bo'limi sarlavhasi",
+                      seriesHeader: "Seriallar rukni sarlavhasi",
+                      sportHeader: "Sport sahifasi sarlavhasi",
+                      noFavs: "Sevimlilar bo'sh bo'lgandagi ogohlantirish",
+                      logoutConfirm: "Tizimdan chiqish tasdiq so'zi",
+                      premiumUnlockNotice: "Premium qulflangandagi ogohlantirish matni"
+                    };
+
+                    return (
+                      <div key={key} className="p-4 rounded bg-black/60 border border-cyan-950/40 space-y-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-gray-900 pb-1.5">
+                          <span className="font-mono text-[11px] text-cyan-400 font-bold bg-cyan-950/40 px-2 py-0.5 rounded">
+                            {key}
+                          </span>
+                          <span className="text-[10px] text-gray-500 italic">
+                            {keyDescriptions[key] || "Tizim so'zi"}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">UZ - O'zbekcha</label>
+                            <input
+                              type="text"
+                              name={`uz_${key}`}
+                              defaultValue={siteWords.uz[key] || ""}
+                              required
+                              className="w-full bg-black border border-cyan-950/60 p-2 rounded text-white text-xs placeholder-gray-800 focus:border-cyan-500 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">RU - Ruscha</label>
+                            <input
+                              type="text"
+                              name={`ru_${key}`}
+                              defaultValue={siteWords.ru[key] || ""}
+                              required
+                              className="w-full bg-black border border-cyan-950/40 p-2 rounded text-gray-300 text-xs placeholder-gray-800 focus:border-cyan-500 outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">EN - Inglizcha</label>
+                            <input
+                              type="text"
+                              name={`en_${key}`}
+                              defaultValue={siteWords.en[key] || ""}
+                              required
+                              className="w-full bg-black border border-cyan-950/40 p-2 rounded text-gray-300 text-xs placeholder-gray-800 focus:border-cyan-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-3 border-t border-cyan-950/30 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-3 rounded bg-cyan-500 text-black font-extrabold uppercase hover:bg-cyan-400 cursor-pointer shadow-lg shadow-cyan-950/50 flex items-center space-x-2"
+                  >
+                    <Save size={14} />
+                    <span>O'zgarishlarni va ifodalarni saqlash</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
 
           {/* I. PHP CODES EXPORTER (THE EXTREMELY COOL CORE COMPONENT) */}

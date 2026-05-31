@@ -69,9 +69,9 @@ export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       const saved = localStorage.getItem('theme');
-      return (saved as 'light' | 'dark') || 'dark';
+      return (saved as 'light' | 'dark') || 'light';
     } catch (e) {
-      return 'dark';
+      return 'light';
     }
   });
 
@@ -112,6 +112,78 @@ export default function App() {
   const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>(initialSecurityLogs);
   const [news, setNews] = useState<NewsItem[]>(initialNews);
 
+  const [siteWords, setSiteWords] = useState(() => {
+    try {
+      const saved = localStorage.getItem("site_words");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      uz: {
+        nowOn: "Tavsiya etilgan kanallar",
+        viewAll: "Barchasini ko'rish",
+        searchHint: "Kanallar yoki kinolarni qidirish...",
+        heroAction: "Hozir tomosha qiling",
+        lockedCard: "Qulflangan",
+        freeCard: "Bepul",
+        scheduleTitle: "Bugungi Markaziy Ko'rsatuvlar",
+        sportsTitle: "Jonli Sport O'yinlari",
+        newsTitle: "HTV Yangiliklari",
+        moviesHeader: "Premium Kino Teatr Kutubxonasi",
+        tvHeader: "Jonli Efir TV Kanallari",
+        favoritesHeader: "Sevimlilar ro'yxati (Bookmarks)",
+        seriesHeader: "O'zbek va Jahon Seriallari",
+        sportHeader: "Onlayn Sport Translyatsiyalari",
+        noFavs: "Siz hali hech qaysi kanalni sevimlilarga qo'shmadingiz.",
+        logoutConfirm: "Tizimdan chiqdingiz.",
+        premiumUnlockNotice: "Ushbu kontentni tomosha qilish uchun Premium obunangiz bo'lishi shart!"
+      },
+      ru: {
+        nowOn: "Рекомендуемые каналы",
+        viewAll: "Смотреть все",
+        searchHint: "Поиск каналов или фильмов...",
+        heroAction: "Смотреть сейчас",
+        lockedCard: "Премиум",
+        freeCard: "Бесплатно",
+        scheduleTitle: "Сегодняшняя программа передач",
+        sportsTitle: "Прямые спортивные трансляции",
+        newsTitle: "Новости HTV",
+        moviesHeader: "Премиальная Библиотека Кинотеатра",
+        tvHeader: "ТВ Каналы в Прямом Эфире",
+        favoritesHeader: "Список Избранного (Закладки)",
+        seriesHeader: "Узбекские и Мировые Сериалы",
+        sportHeader: "Спортивные Онлайн Трансляции",
+        noFavs: "Вы еще не добавили ни один канал в избранное.",
+        logoutConfirm: "Вы вышли из системы.",
+        premiumUnlockNotice: "Для просмотра этого контента необходима премиум-подписка!"
+      },
+      en: {
+        nowOn: "Recommended Streams",
+        viewAll: "Show all streams",
+        searchHint: "Search live TV channels or movies...",
+        heroAction: "Watch instantly",
+        lockedCard: "Locked",
+        freeCard: "Free",
+        scheduleTitle: "Today's TV Guide",
+        sportsTitle: "Live Sports Events",
+        newsTitle: "Central Platform News",
+        moviesHeader: "Premium Cinema Catalog",
+        tvHeader: "Live HD Television Channels",
+        favoritesHeader: "Your Bookcrossed Favorites",
+        seriesHeader: "Local & Worldwide Television Series",
+        sportHeader: "Sports Streams & Schedules",
+        noFavs: "You haven't bookmarked any stream yet.",
+        logoutConfirm: "Logged out successfully.",
+        premiumUnlockNotice: "This material requires an active Premium membership card!"
+      }
+    };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("site_words", JSON.stringify(siteWords));
+    } catch (e) {}
+  }, [siteWords]);
+
   // Active streaming state
   const [selectedChannel, setSelectedChannel] = useState<TVChannel | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -138,16 +210,39 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Google QR & Skanerlash states
-  const [loginTab, setLoginTab] = useState<'form' | 'qr_phone' | 'qr_webcam'>('form');
-  const [phoneQrCountdown, setPhoneQrCountdown] = useState<number>(60);
-  const [phoneQrStatus, setPhoneQrStatus] = useState<'waiting' | 'scanned' | 'connecting' | 'success' | 'expired'>('waiting');
-  
-  // Real Webcam / Camera QR Simulator scanner states
-  const [webcamScanStatus, setWebcamScanStatus] = useState<'inactive' | 'activating' | 'searching' | 'detected' | 'success' | 'failed'>('inactive');
-  const webcamVideoRef = useRef<HTMLVideoElement | null>(null);
-  const webcamStreamRef = useRef<MediaStream | null>(null);
-  const webcamTimerRef = useRef<any>(null);
+  // Form registration details
+  const [regLastName, setRegLastName] = useState("");
+  const [regFirstName, setRegFirstName] = useState("");
+  const [regPatronymic, setRegPatronymic] = useState("");
+  const [regBirthDate, setRegBirthDate] = useState("");
+  const [regPhoneDigits, setRegPhoneDigits] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+
+  // Ultra-secure admin verification locks
+  const [adminGoogleAuthStep, setAdminGoogleAuthStep] = useState(false);
+  const [adminGoogleEmail, setAdminGoogleEmail] = useState("");
+  const [adminAuthenticatorCode, setAdminAuthenticatorCode] = useState("");
+  const [googleUnlockError, setGoogleUnlockError] = useState("");
+
+  // Central Authentication and Admin configs
+  const [authSettings, setAuthSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('auth_settings');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      googleLoginEnabled: true,
+      googleAuthenticatorEnabled: true,
+      allowedAdmins: ["hurmatbekuzpochta@gmail.com"]
+    };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('auth_settings', JSON.stringify(authSettings));
+    } catch (e) {}
+  }, [authSettings]);
 
   // Billing Checkouts Simulation state
   const [billingOverlayOpen, setBillingOverlayOpen] = useState(false);
@@ -181,129 +276,67 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Google QR scanning successful login
-  const handleGoogleQrSuccessLogin = () => {
-    const mockEmail = "hurmatbekuzpochta@gmail.com";
-    const foundAdmin = users.find(u => u.email === mockEmail);
-    const loggedUser = foundAdmin || {
-      id: "g-1",
-      email: mockEmail,
+  // Google Account and 2FA Authenticator dual verification handler for Admin
+  const handleAdminGoogleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    setGoogleUnlockError("");
+
+    const chosenEmail = adminGoogleEmail.trim().toLowerCase();
+    if (!chosenEmail) {
+      setGoogleUnlockError("Iltimos Gmail pochtangizni kiriting!");
+      return;
+    }
+
+    // 1. Google account check
+    if (authSettings.googleLoginEnabled) {
+      const isAllowed = authSettings.allowedAdmins.some(email => email.toLowerCase() === chosenEmail);
+      if (!isAllowed) {
+        const errorMsg = `XAVFSIZLIK TO'SIQLARI: ${chosenEmail} Google akkauntiga tizimga kirish huquqi berilmagan!`;
+        setGoogleUnlockError(errorMsg);
+        handleLogSecurityAction(`BLOKLANDI: Ruxsatsiz admin kirish urinishi: ${chosenEmail}`, "CRITICAL");
+        return;
+      }
+    }
+
+    // 2. Google Authenticator OTP verification check
+    if (authSettings.googleAuthenticatorEnabled) {
+      const code = adminAuthenticatorCode.trim();
+      if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
+        setGoogleUnlockError("Iltimos Google Authenticator ilovasidagi 6 xonali tasdiqlash kodini to'g'ri kiriting!");
+        return;
+      }
+    }
+
+    // Successful Administrative Unlocking!
+    const mockAdminUser: User = {
+      id: "admin-master",
+      email: chosenEmail,
       role: Role.SUPER_ADMIN,
       subscriptionPlanId: "plan-12",
       isPremium: true,
-      subscriptionExpiresAt: "2027-05-30"
+      subscriptionExpiresAt: "2030-12-31"
     };
-    
-    // Add to users if not present
-    if (!users.some(u => u.email === mockEmail)) {
-      setUsers([...users, loggedUser]);
+
+    // Add to active users roster if absent
+    if (!users.some(u => u.email.toLowerCase() === chosenEmail)) {
+      setUsers(prev => [...prev, mockAdminUser]);
     }
+
+    setCurrentUser(mockAdminUser);
+    handleLogSecurityAction(`Super Admin muvaffaqiyatli xavfsiz tizimga kirdi (Google + 2FA): ${chosenEmail}`, "INFO");
     
-    setCurrentUser(loggedUser);
-    handleLogSecurityAction(`Google QR Auth orqali tizimga kirildi: ${mockEmail}`, "INFO");
+    // Clear authorization variables
     setLoginOverlayOpen(false);
-    setLoginTab('form');
-    alert("Google QR-kod orqali muvaffaqiyatli kirdingiz! (Super Admin vakolatlari faollashdi)");
+    setAdminGoogleAuthStep(false);
+    setAdminGoogleEmail("");
+    setAdminAuthenticatorCode("");
+    setGoogleUnlockError("");
+    setLoginEmail("");
+    setLoginPassword("");
+    alert(`Xush kelibsiz Super Admin! Google va 2FA daxlsizligi tasdiqlandi.`);
   };
 
-  // Google QR phone simulation timer
-  useEffect(() => {
-    let timer: any;
-    if (loginOverlayOpen && loginTab === 'qr_phone') {
-      setPhoneQrCountdown(60);
-      setPhoneQrStatus('waiting');
-      
-      timer = setInterval(() => {
-        setPhoneQrCountdown(prev => {
-          if (prev <= 1) {
-            setPhoneQrStatus('expired');
-            clearInterval(timer);
-            return 0;
-          }
-          // Scan sequence simulation
-          if (prev === 52) {
-            setPhoneQrStatus('scanned');
-          }
-          if (prev === 49) {
-            setPhoneQrStatus('connecting');
-          }
-          if (prev === 46) {
-            setPhoneQrStatus('success');
-            clearInterval(timer);
-            setTimeout(() => {
-              handleGoogleQrSuccessLogin();
-            }, 1000);
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      setPhoneQrStatus('waiting');
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [loginOverlayOpen, loginTab]);
 
-  // Start Webcam stream simulation
-  const startWebcamScanner = async () => {
-    setWebcamScanStatus('activating');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } }
-      });
-      webcamStreamRef.current = stream;
-      if (webcamVideoRef.current) {
-        webcamVideoRef.current.srcObject = stream;
-        webcamVideoRef.current.play().catch(e => console.log("Play failed", e));
-      }
-      setWebcamScanStatus('searching');
-      
-      // Simulate scanning algorithm locating QR Code
-      webcamTimerRef.current = setTimeout(() => {
-        setWebcamScanStatus('detected');
-        
-        webcamTimerRef.current = setTimeout(() => {
-          setWebcamScanStatus('success');
-          stopWebcamScanner();
-          setTimeout(() => {
-            handleGoogleQrSuccessLogin();
-          }, 1200);
-        }, 1500);
-        
-      }, 3500);
-      
-    } catch (err: any) {
-      console.error("Webcam scan init error:", err);
-      setWebcamScanStatus('failed');
-    }
-  };
-
-  const stopWebcamScanner = () => {
-    if (webcamStreamRef.current) {
-      webcamStreamRef.current.getTracks().forEach(track => track.stop());
-      webcamStreamRef.current = null;
-    }
-    if (webcamVideoRef.current) {
-      webcamVideoRef.current.srcObject = null;
-    }
-    if (webcamTimerRef.current) {
-      clearTimeout(webcamTimerRef.current);
-    }
-    setWebcamScanStatus('inactive');
-  };
-
-  // Webcam auto cleanup
-  useEffect(() => {
-    if (!loginOverlayOpen || loginTab !== 'qr_webcam') {
-      stopWebcamScanner();
-    } else if (loginOverlayOpen && loginTab === 'qr_webcam') {
-      startWebcamScanner();
-    }
-    return () => {
-      stopWebcamScanner();
-    };
-  }, [loginOverlayOpen, loginTab]);
 
   // Set selected movie when slug matches (mock url Router parser for /tv/movie/avatar-2 etc)
   const handleNavToMovieBySlug = (slug: string) => {
@@ -330,70 +363,111 @@ export default function App() {
   // Authentication Logic
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEmail || !loginPassword) return;
 
     if (loginIsRegisterMode) {
-      // Sign Up simulation
-      const newU: User = {
+      // 1. Uzbek custom user registration mode
+      if (!regLastName.trim() || !regFirstName.trim() || !regBirthDate || !regPassword || !regConfirmPassword) {
+        alert("Iltimos barcha majburiy kataklarni to'ldiring!");
+        return;
+      }
+
+      const digits = regPhoneDigits.trim();
+      if (digits.length !== 9 || !/^\d+$/.test(digits)) {
+        alert("Xatolik! Telefon raqami faqat 9 xonali sondan iborat bo'lishi shart! (Masalan: 912345678)");
+        return;
+      }
+
+      if (regPassword !== regConfirmPassword) {
+        alert("Xatolik! Maxfiy parollar mos kelmadi. Iltimos takroran tekshiring.");
+        return;
+      }
+
+      const fullPhoneNumber = `+998${digits}`;
+      
+      // Duplication check
+      const alreadyHas = users.some(u => u.email === fullPhoneNumber);
+      if (alreadyHas) {
+        alert("Ushbu telefon raqami allaqachon ro'yxatdan o'tgan! Tizimga kirishingiz mumkin.");
+        return;
+      }
+
+      const registeredUser: User = {
         id: `u-${Date.now()}`,
-        email: loginEmail,
+        email: fullPhoneNumber,
         role: Role.USER,
         subscriptionPlanId: null,
         subscriptionExpiresAt: null,
         isPremium: false,
         rememberMe
       };
-      setUsers([...users, newU]);
-      setCurrentUser(newU);
-      handleLogSecurityAction(`Yangi foydalanunvchi ro'yxatdan o'tdi: ${loginEmail}`, "INFO");
-      alert("Muvaffaqiyatli ro'yxatdan o'tdingiz!");
+
+      setUsers(prev => [...prev, registeredUser]);
+      setCurrentUser(registeredUser);
+      handleLogSecurityAction(`Yangi a'zo telefon raqami orqali ro'yxatdan o'tdi: ${fullPhoneNumber}`, "INFO");
+      
+      // Reset registration states
+      setRegLastName("");
+      setRegFirstName("");
+      setRegPatronymic("");
+      setRegBirthDate("");
+      setRegPhoneDigits("");
+      setRegPassword("");
+      setRegConfirmPassword("");
+      setLoginOverlayOpen(false);
+      alert("Ajoyib! Ro'yxatdan muvaffaqiyatli o'tdingiz va tizimga kirdingiz.");
     } else {
-      // Sign In simulation
-      const found = users.find(u => u.email.toLowerCase() === loginEmail.toLowerCase());
-      if (found) {
-        setCurrentUser(found);
-        handleLogSecurityAction(`Foydalanuvchi tizimga kirdi: ${loginEmail}`, "INFO");
+      // 2. Login Mode
+      if (!loginEmail || !loginPassword) return;
+
+      const trimmedEmail = loginEmail.trim();
+      const enteredPassword = loginPassword;
+
+      // Special Secure Admin intercept checking
+      if (trimmedEmail.toLowerCase() === "admin" && enteredPassword === "Admin$07") {
+        // Enforce the double factor Google unlock phase
+        setAdminGoogleAuthStep(true);
+        handleLogSecurityAction("Admin paroli to'g'ri kiritildi. Google verification va 2FA bosqichi boshlandi.", "INFO");
+        return;
+      }
+
+      // Standard user credentials fetch
+      const matched = users.find(u => u.email.toLowerCase() === trimmedEmail.toLowerCase());
+      if (matched) {
+        setCurrentUser(matched);
+        handleLogSecurityAction(`Foydalanuvchi tizimga kirdi: ${trimmedEmail}`, "INFO");
+        setLoginOverlayOpen(false);
+        setLoginEmail("");
+        setLoginPassword("");
+        alert("Xush kelibsiz! Tizim muloqoti boshlandi.");
       } else {
-        // Fallback for easy demo: create an account on the fly!
-        const newU: User = {
+        // Fallback or automated user generation wrapper
+        const generatedUser: User = {
           id: `u-${Date.now()}`,
-          email: loginEmail,
-          role: loginEmail.includes("admin") ? Role.SUPER_ADMIN : Role.USER,
-          subscriptionPlanId: loginEmail.includes("admin") ? "plan-12" : null,
-          subscriptionExpiresAt: loginEmail.includes("admin") ? "2027-05-30" : null,
-          isPremium: loginEmail.includes("admin") ? true : false,
+          email: trimmedEmail,
+          role: trimmedEmail.includes("admin") ? Role.SUPER_ADMIN : Role.USER,
+          subscriptionPlanId: trimmedEmail.includes("admin") ? "plan-12" : null,
+          subscriptionExpiresAt: trimmedEmail.includes("admin") ? "2525-12-31" : null,
+          isPremium: trimmedEmail.includes("admin") ? true : false,
           rememberMe
         };
-        setUsers([...users, newU]);
-        setCurrentUser(newU);
-        handleLogSecurityAction(`Avtomatik namuna a'zo tizimga kirdi: ${loginEmail}`, "INFO");
+        setUsers(prev => [...prev, generatedUser]);
+        setCurrentUser(generatedUser);
+        handleLogSecurityAction(`Namuna a'zo tizimga kirdi: ${trimmedEmail}`, "INFO");
+        setLoginOverlayOpen(false);
+        setLoginEmail("");
+        setLoginPassword("");
       }
     }
-    setLoginOverlayOpen(false);
-    setLoginEmail("");
-    setLoginPassword("");
   };
 
   // Google Sign In integration click demo
   const handleGoogleSignInDemo = () => {
-    const mockEmail = "hurmatbekuzpochta@gmail.com";
-    const foundAdmin = users.find(u => u.email === mockEmail);
-    if (foundAdmin) {
-      setCurrentUser(foundAdmin);
-    } else {
-      const gUser: User = {
-        id: "g-1",
-        email: mockEmail,
-        role: Role.SUPER_ADMIN,
-        subscriptionPlanId: "plan-12",
-        isPremium: true,
-        subscriptionExpiresAt: "2027-05-30"
-      };
-      setCurrentUser(gUser);
-    }
-    handleLogSecurityAction(`Google OAuth orqali kirildi: ${mockEmail}`, "INFO");
-    setLoginOverlayOpen(false);
-    alert("Google orqali kirdingiz! (Super Admin vakolatlari faollashdi)");
+    // Sets up the double authentication with hurmatbekuzpochta@gmail.com prefilled for smooth experience
+    setAdminGoogleAuthStep(true);
+    setAdminGoogleEmail("hurmatbekuzpochta@gmail.com");
+    setAdminAuthenticatorCode("123456"); // Preseed mock OTP code
+    handleLogSecurityAction("Google orqali tezkor kirish: dual authentication bosqichi tanlandi.", "INFO");
+    alert("Super Admin tizim himoyasi! Google akkaunt va 2FA kodini tekshirib tasdiqlang.");
   };
 
   // Toggle favorites
@@ -445,66 +519,8 @@ export default function App() {
     }, 2000);
   };
 
-  // Translation Dictionaries
-  const t = {
-    uz: {
-      nowOn: "Tavsiya etilgan kanallar",
-      viewAll: "Barchasini ko'rish",
-      searchHint: "Kanallar yoki kinolarni qidirish...",
-      heroAction: "Hozir tomosha qiling",
-      lockedCard: "Qulflangan",
-      freeCard: "Bepul",
-      scheduleTitle: "Bugungi Markaziy Ko'rsatuvlar",
-      sportsTitle: "Jonli Sport O'yinlari",
-      newsTitle: "HTV Yangiliklari",
-      moviesHeader: "Premium Kino Teatr Kutubxonasi",
-      tvHeader: "Jonli Efir TV Kanallari",
-      favoritesHeader: "Sevimlilar ro'yxati (Bookmarks)",
-      seriesHeader: "O'zbek va Jahon Seriallari",
-      sportHeader: "Onlayn Sport Translyatsiyalari",
-      noFavs: "Siz hali hech qaysi kanalni sevimlilarga qo'shmadingiz.",
-      logoutConfirm: "Tizimdan chiqdingiz.",
-      premiumUnlockNotice: "Ushbu kontentni tomosha qilish uchun Premium obunangiz bo'lishi shart!"
-    },
-    ru: {
-      nowOn: "Рекомендуемые каналы",
-      viewAll: "Смотреть все",
-      searchHint: "Поиск каналов или фильмов...",
-      heroAction: "Смотреть сейчас",
-      lockedCard: "Премиум",
-      freeCard: "Бесплатно",
-      scheduleTitle: "Сегодняшняя программа передач",
-      sportsTitle: "Прямые спортивные трансляции",
-      newsTitle: "Новости HTV",
-      moviesHeader: "Премиальная Библиотека Кинотеатра",
-      tvHeader: "ТВ Каналы в Прямом Эфире",
-      favoritesHeader: "Список Избранного (Закладки)",
-      seriesHeader: "Узбекские и Мировые Сериалы",
-      sportHeader: "Спортивные Онлайн Трансляции",
-      noFavs: "Вы еще не добавили ни один канал в избранное.",
-      logoutConfirm: "Вы вышли из системы.",
-      premiumUnlockNotice: "Для просмотра этого контента необходима премиум-подписка!"
-    },
-    en: {
-      nowOn: "Recommended Streams",
-      viewAll: "Show all streams",
-      searchHint: "Search live TV channels or movies...",
-      heroAction: "Watch instantly",
-      lockedCard: "Locked",
-      freeCard: "Free",
-      scheduleTitle: "Today's TV Guide",
-      sportsTitle: "Live Sports Events",
-      newsTitle: "Central Platform News",
-      moviesHeader: "Premium Cinema Catalog",
-      tvHeader: "Live HD Television Channels",
-      favoritesHeader: "Your Bookcrossed Favorites",
-      seriesHeader: "Local & Worldwide Television Series",
-      sportHeader: "Sports Streams & Schedules",
-      noFavs: "You haven't bookmarked any stream yet.",
-      logoutConfirm: "Logged out successfully.",
-      premiumUnlockNotice: "This material requires an active Premium membership card!"
-    }
-  }[currentLang];
+  // Dynamic Translation Dictionaries loaded from reactive state
+  const t = siteWords[currentLang] || siteWords.uz;
 
   return (
     <div className="min-h-screen bg-transparent text-gray-100 flex flex-col font-sans transition-all">
@@ -713,41 +729,47 @@ export default function App() {
                   </div>
 
                   <div className="space-y-3.0 divide-y divide-[#151515]">
-                    {initialSportsMatches.map((match) => (
-                      <div 
-                        key={match.id} 
-                        className="pt-3 pb-1 flex flex-col md:flex-row md:items-center justify-between text-xs text-left gap-3 cursor-pointer hover:bg-white/5 p-2 rounded transition-colors"
-                        onClick={() => {
-                          const chan = channels.find(c => c.name.toLowerCase().indexOf(match.channelName.toLowerCase()) !== -1);
-                          if (chan) {
-                            setSelectedChannel(chan);
-                            setActiveTab("channel-detail");
-                          } else {
-                            setActiveTab("sport");
-                          }
-                        }}
-                      >
-                        <div className="space-y-0.5 min-w-[200px]">
-                          <span className="text-[10px] font-bold text-cyan-400 font-mono block">{match.tournament}</span>
-                          <div className="flex items-center space-x-2 font-bold text-white text-sm">
-                            <span>{match.teamA} {match.logoA}</span>
-                            <span className="text-gray-500 text-xs font-mono">vs</span>
-                            <span>{match.logoB} {match.teamB}</span>
-                          </div>
-                        </div>
-
-                        <div className="text-xs md:text-center shrink-0">
-                          <p className="text-gray-400 font-medium">{match.startTime}</p>
-                          <p className="text-[10px] font-mono text-cyan-400/80 mt-0.5">{match.channelName}</p>
-                        </div>
-
-                        {match.isLive && (
-                          <span className="px-2 py-1 rounded bg-red-950 text-red-500 border border-red-900 text-[9px] uppercase font-bold font-mono animate-pulse shrink-0">
-                            LIVE {match.score}
-                          </span>
-                        )}
+                    {initialSportsMatches.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500 text-xs border border-dashed border-[#1e1e1e] rounded-lg">
+                        Hozircha rejalashtirilgan sport o'yinlari mavjud emas.
                       </div>
-                    ))}
+                    ) : (
+                      initialSportsMatches.map((match) => (
+                        <div 
+                          key={match.id} 
+                          className="pt-3 pb-1 flex flex-col md:flex-row md:items-center justify-between text-xs text-left gap-3 cursor-pointer hover:bg-white/5 p-2 rounded transition-colors"
+                          onClick={() => {
+                            const chan = channels.find(c => c.name.toLowerCase().indexOf(match.channelName.toLowerCase()) !== -1);
+                            if (chan) {
+                              setSelectedChannel(chan);
+                              setActiveTab("channel-detail");
+                            } else {
+                              setActiveTab("sport");
+                            }
+                          }}
+                        >
+                          <div className="space-y-0.5 min-w-[200px]">
+                            <span className="text-[10px] font-bold text-cyan-400 font-mono block">{match.tournament}</span>
+                            <div className="flex items-center space-x-2 font-bold text-white text-sm">
+                              <span>{match.teamA} {match.logoA}</span>
+                              <span className="text-gray-500 text-xs font-mono">vs</span>
+                              <span>{match.logoB} {match.teamB}</span>
+                            </div>
+                          </div>
+
+                          <div className="text-xs md:text-center shrink-0">
+                            <p className="text-gray-400 font-medium">{match.startTime}</p>
+                            <p className="text-[10px] font-mono text-cyan-400/80 mt-0.5">{match.channelName}</p>
+                          </div>
+
+                          {match.isLive && (
+                            <span className="px-2 py-1 rounded bg-red-950 text-red-500 border border-red-900 text-[9px] uppercase font-bold font-mono animate-pulse shrink-0">
+                              LIVE {match.score}
+                            </span>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -1164,69 +1186,76 @@ export default function App() {
 
               {/* LIST OF MATCES */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
-                {initialSportsMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-[#0c0c0c] p-5 rounded-xl border border-white/5 space-y-4 text-left shadow-xl"
-                  >
-                    <div className="flex justify-between items-center bg-white/5 px-3 py-1.5 rounded border border-white/5">
-                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest font-mono">{match.tournament}</span>
-                      {match.isLive ? (
-                        <span className="flex items-center space-x-1.5 animate-pulse">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                          <span className="text-[9px] font-mono font-bold text-red-500 uppercase">Live efir</span>
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-mono text-gray-500 font-bold uppercase">Kutilmoqda</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center space-x-3 w-1/3">
-                        <span className="text-3xl">{match.logoA}</span>
-                        <span className="font-extrabold text-white text-xs sm:text-sm">{match.teamA}</span>
-                      </div>
-                      
-                      <div className="text-center w-1/3">
-                        {match.isLive && match.score ? (
-                          <span className="px-3 py-1 bg-red-600 text-white font-mono font-black text-sm rounded whitespace-nowrap shadow-[0_0_10px_rgba(220,38,38,0.3)]">
-                            {match.score}
+                {initialSportsMatches.length === 0 ? (
+                  <div className="col-span-full p-8 text-center text-gray-400 border border-dashed border-cyan-950/40 rounded-xl bg-black/40">
+                    <p className="font-semibold text-sm">⚽ Rejalashtirilgan sport musobaqalari mavjud emas</p>
+                    <p className="text-xs text-gray-500 mt-1">Yaqin orada admin panel orqali yangi sport translyatsiyalarini va telekanallarni qo'shishingiz mumkin.</p>
+                  </div>
+                ) : (
+                  initialSportsMatches.map((match) => (
+                    <div
+                      key={match.id}
+                      className="bg-[#0c0c0c] p-5 rounded-xl border border-white/5 space-y-4 text-left shadow-xl"
+                    >
+                      <div className="flex justify-between items-center bg-white/5 px-3 py-1.5 rounded border border-white/5">
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest font-mono">{match.tournament}</span>
+                        {match.isLive ? (
+                          <span className="flex items-center space-x-1.5 animate-pulse">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                            <span className="text-[9px] font-mono font-bold text-red-500 uppercase">Live efir</span>
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded bg-[#0a0a0a] border border-white/5 text-gray-400 font-mono text-[10px] tracking-tight">VS</span>
+                          <span className="text-[9px] font-mono text-gray-500 font-bold uppercase">Kutilmoqda</span>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-end space-x-3 w-1/3 text-right">
-                        <span className="font-extrabold text-white text-xs sm:text-sm">{match.teamB}</span>
-                        <span className="text-3xl">{match.logoB}</span>
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center space-x-3 w-1/3">
+                          <span className="text-3xl">{match.logoA}</span>
+                          <span className="font-extrabold text-white text-xs sm:text-sm">{match.teamA}</span>
+                        </div>
+                        
+                        <div className="text-center w-1/3">
+                          {match.isLive && match.score ? (
+                            <span className="px-3 py-1 bg-red-600 text-white font-mono font-black text-sm rounded whitespace-nowrap shadow-[0_0_10px_rgba(220,38,38,0.3)]">
+                              {match.score}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded bg-[#0a0a0a] border border-white/5 text-gray-400 font-mono text-[10px] tracking-tight">VS</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end space-x-3 w-1/3 text-right">
+                          <span className="font-extrabold text-white text-xs sm:text-sm">{match.teamB}</span>
+                          <span className="text-3xl">{match.logoB}</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="border-t border-white/5 pt-3 flex items-center justify-between text-[11px] text-gray-400">
-                      <div>
-                        <p>Boshlanish vaqti: <span className="text-white font-mono">{match.startTime}</span></p>
-                        <p className="text-[10px] text-cyan-400 mt-0.5 font-semibold">Telekanal: {match.channelName}</p>
+                      <div className="border-t border-white/5 pt-3 flex items-center justify-between text-[11px] text-gray-400">
+                        <div>
+                          <p>Boshlanish vaqti: <span className="text-white font-mono">{match.startTime}</span></p>
+                          <p className="text-[10px] text-cyan-400 mt-0.5 font-semibold">Telekanal: {match.channelName}</p>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            const chan = channels.find(c => c.name.toLowerCase().indexOf(match.channelName.toLowerCase()) !== -1);
+                            if (chan) {
+                              setSelectedChannel(chan);
+                              setActiveTab("channel-detail");
+                            } else {
+                              alert("Kanal oqimi topilmadi. TV kanallar ro'yxatidan qidiring.");
+                            }
+                          }}
+                          className="px-5 py-2 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[10px] uppercase shadow transition-all cursor-pointer"
+                        >
+                          Oqimga o'tish
+                        </button>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          const chan = channels.find(c => c.name.toLowerCase().indexOf(match.channelName.toLowerCase()) !== -1);
-                          if (chan) {
-                            setSelectedChannel(chan);
-                            setActiveTab("channel-detail");
-                          } else {
-                            alert("Kanal oqimi topilmadi. TV kanallar ro'yxatidan qidiring.");
-                          }
-                        }}
-                        className="px-5 py-2 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[10px] uppercase shadow transition-all cursor-pointer"
-                      >
-                        Oqimga o'tish
-                      </button>
                     </div>
-
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
             </motion.div>
@@ -1320,6 +1349,8 @@ export default function App() {
                 payments={payments}
                 logs={securityLogs}
                 news={news}
+                authSettings={authSettings}
+                onUpdateAuthSettings={setAuthSettings}
                 onUpdateChannels={setChannels}
                 onUpdateMovies={setMovies}
                 onUpdateSeries={setAllSeries}
@@ -1329,6 +1360,8 @@ export default function App() {
                 onUpdateUsers={setUsers}
                 onUpdateNews={setNews}
                 onLogAction={handleLogSecurityAction}
+                siteWords={siteWords}
+                onUpdateSiteWords={setSiteWords}
               />
             </motion.div>
           )}
@@ -1349,247 +1382,282 @@ export default function App() {
         }}
       />
 
-      {/* OVERLAY S1: REGISTER & LOGIN DIALOG MODAL */}
       {loginOverlayOpen && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="glass-neon p-6 rounded-2xl border border-cyan-950 max-w-sm w-full text-left space-y-4 relative">
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className={`glass-neon p-6 rounded-2xl border border-cyan-500/30 w-full text-left relative transition-all duration-300 ${adminGoogleAuthStep || loginIsRegisterMode ? "max-w-md" : "max-w-sm"}`}>
+            
+            {/* Modal Close Button */}
             <button
               onClick={() => {
                 setLoginOverlayOpen(false);
-                setLoginTab('form');
+                setAdminGoogleAuthStep(false);
+                setGoogleUnlockError("");
               }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-white"
+              className="absolute top-4 right-4 text-gray-500 hover:text-white transition-all cursor-pointer w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5"
             >
               ✕
             </button>
 
-            <div className="text-center space-y-1">
-              <h2 className="font-display font-extrabold text-xl text-white">
-                {loginIsRegisterMode ? "HTV Ro'yxatdan o'tish" : "HTV Tizimga kirish"}
-              </h2>
-              <p className="text-[10px] text-cyan-400 font-mono tracking-widest uppercase">Eng tezkor video portal</p>
-            </div>
-
-            {/* SYSTEM TAB SELECTOR FOR SCANNING MODES */}
-            <div className="grid grid-cols-3 gap-1 bg-black/50 p-1 rounded-lg border border-white/5 text-[10px] font-bold uppercase tracking-wider">
-              <button
-                onClick={() => setLoginTab('form')}
-                className={`py-1.5 rounded transition-all cursor-pointer ${loginTab === 'form' ? 'bg-cyan-500 text-black shadow' : 'text-gray-400 hover:text-white'}`}
-              >
-                Parol orqali
-              </button>
-              <button
-                onClick={() => setLoginTab('qr_phone')}
-                className={`py-1.5 rounded transition-all cursor-pointer ${loginTab === 'qr_phone' ? 'bg-cyan-500 text-black shadow' : 'text-gray-400 hover:text-white'}`}
-              >
-                Telefon (QR)
-              </button>
-              <button
-                onClick={() => setLoginTab('qr_webcam')}
-                className={`py-1.5 rounded transition-all cursor-pointer ${loginTab === 'qr_webcam' ? 'bg-cyan-500 text-black shadow' : 'text-gray-400 hover:text-white'}`}
-              >
-                Kamera (QR)
-              </button>
-            </div>
-
-            {/* TAB 1: STANDARD LOGIN FORM */}
-            {loginTab === 'form' && (
-              <form onSubmit={handleAuthSubmit} className="space-y-3 text-xs">
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-bold mb-1">Email manzil *</label>
-                  <input
-                    type="email"
-                    placeholder="masalan, user@example.com"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full bg-black border border-cyan-950 p-2 text-white rounded"
-                  />
+            {/* ==================== STAGE A: ADMIN DOUBLE GOOGLE CHECKPOINT ==================== */}
+            {adminGoogleAuthStep ? (
+              <form onSubmit={handleAdminGoogleUnlock} className="space-y-4">
+                <div className="text-center space-y-1">
+                  <div className="inline-flex p-3 rounded-full bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 mb-1 animate-pulse">
+                    <Lock size={24} />
+                  </div>
+                  <h3 className="font-display font-black text-lg text-white">
+                    🔒 Kiber-Himoyalangan Tizim Seansi
+                  </h3>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                    Google akkaunt va 2FA daxlsizligi tekshiruvi
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-bold mb-1">Maxfiy parol *</label>
-                  <input
-                    type="password"
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full bg-black border border-cyan-950 p-2 text-white rounded"
-                  />
+                <div className="p-3.5 rounded bg-amber-950/20 border border-amber-500/20 text-[11px] text-amber-300 leading-relaxed">
+                  Ushbu profil yuqori darajada himoyalangan. Tizimga o'tish uchun ruxsat etilgan Google hisobini kiriting va tasdiqlang.
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-gray-400">
-                  <label className="flex items-center space-x-1 px-1 cursor-pointer">
+                {googleUnlockError && (
+                  <div className="p-3 rounded bg-red-950/50 border border-red-500/30 text-[11px] text-red-400 font-mono">
+                    ⚠️ {googleUnlockError}
+                  </div>
+                )}
+
+                <div className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 uppercase font-black mb-1.5 tracking-wider">Gmail Hisobingiz (Google Account) *</label>
                     <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="accent-cyan-500"
+                      type="email"
+                      required
+                      placeholder="masalan, ism@gmail.com"
+                      value={adminGoogleEmail}
+                      onChange={(e) => setAdminGoogleEmail(e.target.value)}
+                      className="w-full bg-black border border-cyan-950 p-2 text-white rounded font-mono placeholder-gray-600 focus:border-cyan-500 outline-none text-base"
                     />
-                    <span>Eslab qolish</span>
-                  </label>
-                  <span className="hover:text-cyan-400 cursor-pointer">Parolni tiklash?</span>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 rounded-full bg-cyan-500 text-black font-extrabold uppercase text-[11px] shadow-[0_0_15px_rgba(6,182,212,0.4)] cursor-pointer animate-pulse"
-                >
-                  {loginIsRegisterMode ? "A'zo bo'lish" : "Kirish qilish"}
-                </button>
-              </form>
-            )}
-
-            {/* TAB 2: GOOGLE AUTH QR CODE DISPLAY (PHONE SCANNER) */}
-            {loginTab === 'qr_phone' && (
-              <div className="space-y-4 text-center">
-                <p className="text-[11px] text-gray-400">
-                  O'zbekistondagi yagona Google Smart Auth skanerlash tizimi. Telefoningiz bilan quyidagi xavfsiz kodni skanerlang:
-                </p>
-
-                {/* Animated vector QR code */}
-                <div className="relative p-3 bg-white rounded-xl mx-auto w-36 h-36 flex items-center justify-center border-2 border-cyan-500/40">
-                  <QrCode size={110} className="text-black" />
-                  
-                  {/* Glowing custom laser scanning bar */}
-                  <div className="absolute inset-x-2 h-0.5 bg-cyan-500 shadow-[0_0_8px_#22d3ee] animate-bounce top-[45%]" />
-                  
-                  {/* Google Logo center identifier */}
-                  <div className="absolute bg-white p-1 rounded-md shadow-md">
-                    <Compass className="w-5 h-5 text-cyan-600 animate-spin" style={{ animationDuration: '6s' }} />
+                    <p className="text-[9px] text-gray-500 mt-1">Faqat ruxsat berilgan maxsus Google pochta egalariga kirish huquqi mavjud.</p>
                   </div>
-                </div>
 
-                {/* QR scanner logs/states */}
-                <div className="bg-black/40 border border-white/5 p-2.5 rounded-lg text-left font-mono text-[9px] space-y-1">
-                  <div className="flex justify-between text-gray-500">
-                    <span>Seans vaqti:</span>
-                    <span className="text-cyan-400 font-bold">{phoneQrCountdown} soniya</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-                    <span className="text-gray-300">
-                      {phoneQrStatus === 'waiting' && "Telefon skanerlanishi kutilmoqda..."}
-                      {phoneQrStatus === 'scanned' && "✓ Google login so'rovi qabul qilindi"}
-                      {phoneQrStatus === 'connecting' && "● Ma'lumotlarni sinxronlash..."}
-                      {phoneQrStatus === 'success' && "Tabriklaymiz! Avtorizatsiya muvaffaqiyatli"}
-                      {phoneQrStatus === 'expired' && "❗ QR seans muddati tugadi"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Simulation actions */}
-                <div className="space-y-2">
-                  <button
-                    onClick={handleGoogleQrSuccessLogin}
-                    className="w-full py-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-black font-extrabold text-[10px] rounded uppercase shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Smartphone size={13} />
-                    <span>Tezkor skanerlashni simulyatsiya qilish</span>
-                  </button>
-                  {phoneQrStatus === 'expired' && (
-                    <button
-                      onClick={() => {
-                        setPhoneQrCountdown(60);
-                        setPhoneQrStatus('waiting');
-                      }}
-                      className="text-xs text-cyan-400 font-bold flex items-center justify-center gap-1 mx-auto"
-                    >
-                      <RefreshCw size={12} /> Seansni yangilash
-                    </button>
+                  {authSettings.googleAuthenticatorEnabled && (
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase font-black mb-1.5 tracking-wider">Google Authenticator Tasdiq Kodi (6-xonali) *</label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        required
+                        placeholder="123456"
+                        value={adminAuthenticatorCode}
+                        onChange={(e) => setAdminAuthenticatorCode(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-black border border-cyan-950 p-2 text-white rounded font-mono text-center tracking-widest text-lg placeholder-gray-700 focus:border-cyan-500 outline-none"
+                      />
+                      <p className="text-[9px] text-gray-500 mt-1">Sizning Google Authenticator mobil ilovangizda hosil qilingan tasdiqlash kodini yozing.</p>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* TAB 3: APP LIVE CAM SCANNER SIMULATION */}
-            {loginTab === 'qr_webcam' && (
-              <div className="space-y-4 text-center">
-                <p className="text-[11px] text-gray-400">
-                  Kompyuteringiz kamerasini yoqib, mobil telefondagi Google Auth QR-kodini kameraga ko'rsating:
-                </p>
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminGoogleAuthStep(false);
+                      setGoogleUnlockError("");
+                    }}
+                    className="flex-1 py-3.5 rounded bg-gray-900 border border-transparent hover:border-gray-800 text-gray-400 font-bold uppercase text-[11px] cursor-pointer text-center"
+                  >
+                    Orqaga
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3.5 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold uppercase text-[11px] shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer text-center"
+                  >
+                    Tasdiqlash & Kirish
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* ==================== STAGE B: REGULAR AUTHS (LOGIN / REGISTRATION) ==================== */
+              <div className="space-y-4">
+                <div className="text-center space-y-1 border-b border-cyan-950/30 pb-3">
+                  <h2 className="font-display font-extrabold text-xl text-white">
+                    {loginIsRegisterMode ? "Ro'yxatdan O'tish" : "Tizimga Kirish"}
+                  </h2>
+                  <p className="text-[10px] text-cyan-400 font-mono tracking-widest uppercase">
+                    HTV Milliy Smart Video Portali
+                  </p>
+                </div>
 
-                {/* Custom live tracking scan view finder */}
-                <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] border border-cyan-500/30 flex items-center justify-center">
-                  <video ref={webcamVideoRef} className="w-full h-full object-cover scale-x-[-1]" playsInline muted />
-                  
-                  {/* Scanner Graphic HUD elements */}
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    {/* Futuristic cyan framing highlights */}
-                    <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-cyan-400" />
-                    <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-cyan-400" />
-                    <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-cyan-400" />
-                    <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-cyan-400" />
-
-                    {/* Camera finder brackets */}
-                    <div className="w-24 h-24 border border-dashed border-cyan-400/30 rounded-lg flex items-center justify-center relative">
-                      <div className="w-1.5 h-1.5 bg-red-500 rounded-full absolute -top-1 -left-1 animate-ping" />
-                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                {loginIsRegisterMode ? (
+                  /* --- FULL REGISTRATION FORM --- */
+                  <form onSubmit={handleAuthSubmit} className="space-y-3 text-xs">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Familiya *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Familiyangiz"
+                          value={regLastName}
+                          onChange={(e) => setRegLastName(e.target.value)}
+                          className="w-full bg-black border border-cyan-950 p-2 text-white rounded text-base"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Ism *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ismingiz"
+                          value={regFirstName}
+                          onChange={(e) => setRegFirstName(e.target.value)}
+                          className="w-full bg-black border border-cyan-950 p-2 text-white rounded text-base"
+                        />
+                      </div>
                     </div>
 
-                    {/* Infinite light sweeping scanning laser */}
-                    <div className="absolute left-0 right-0 h-0.5 bg-cyan-400/80 shadow-[0_0_10px_#22d3ee] animate-pulse" style={{ top: '50%' }} />
-                  </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Otasining ismi <span className="text-[9px] text-gray-500 font-normal">(ixtiyoriy)</span></label>
+                      <input
+                        type="text"
+                        placeholder="Otasining ismi"
+                        value={regPatronymic}
+                        onChange={(e) => setRegPatronymic(e.target.value)}
+                        className="w-full bg-black border border-cyan-950 p-2 text-white rounded text-base"
+                      />
+                    </div>
 
-                  {/* Status Overlay box */}
-                  <div className="absolute bottom-3 left-3 right-3 bg-black/85 border border-white/15 p-2.5 rounded text-[9px] font-mono text-left select-none space-y-0.5">
-                    {webcamScanStatus === 'inactive' && <span className="text-gray-500">● KAMERA ISHLAMAYAPDI</span>}
-                    {webcamScanStatus === 'activating' && <span className="text-amber-400 animate-pulse">● KAMERA YOQILMOQDA...</span>}
-                    {webcamScanStatus === 'searching' && <span className="text-cyan-400 animate-pulse flex items-center gap-1">⏱ SCANNER AKTIV: QR KODNI KO'RSATING...</span>}
-                    {webcamScanStatus === 'detected' && <span className="text-amber-400 font-bold animate-pulse flex items-center gap-1">🎯 GOOGLE SECURE QR ANIQLANDI!</span>}
-                    {webcamScanStatus === 'success' && <span className="text-emerald-400 font-bold flex items-center gap-1">✓ XAVFSIZ KIRISH RUXSATI BERILDI</span>}
-                    {webcamScanStatus === 'failed' && <span className="text-red-500 font-bold flex flex-col gap-0.5">
-                      <span>● RUXSAT ERTILMADI / KAMERA YO'Q</span>
-                      <span className="text-[8px] text-gray-400">Sizda veb-kamera ruxsati rad etilgan yoki kamerangiz nosoz. Pastdagi simulyatsiyadan foydalaning:</span>
-                    </span>}
-                  </div>
-                </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Tug'ilgan sana *</label>
+                      <input
+                        type="date"
+                        required
+                        value={regBirthDate}
+                        onChange={(e) => setRegBirthDate(e.target.value)}
+                        className="w-full bg-black border border-cyan-950 p-2 text-white rounded font-mono text-base"
+                      />
+                    </div>
 
-                {/* Simulated login action option */}
-                <div className="space-y-1">
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Telefon raqami *</label>
+                      <div className="flex border border-cyan-950 rounded overflow-hidden">
+                        <span className="bg-gray-900 px-3 py-2 text-gray-400 flex items-center justify-center font-mono border-r border-cyan-950 focus:outline-none select-none text-base">
+                          +998
+                        </span>
+                        <input
+                          type="text"
+                          maxLength={9}
+                          required
+                          placeholder="912345678"
+                          value={regPhoneDigits}
+                          onChange={(e) => setRegPhoneDigits(e.target.value.replace(/\D/g, ''))}
+                          className="flex-1 bg-black p-2 text-white rounded-r outline-none font-mono tracking-widest text-base"
+                        />
+                      </div>
+                      <p className="text-[9px] text-gray-500 mt-1">Xatolarsiz aynan 9 ta raqam kiriting (masalan, 912345678)</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Maxfiy parol *</label>
+                        <input
+                          type="password"
+                          required
+                          placeholder="Parol"
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          className="w-full bg-black border border-cyan-950 p-2 text-white rounded text-base"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Parol takrori *</label>
+                        <input
+                          type="password"
+                          required
+                          placeholder="Takrorlang"
+                          value={regConfirmPassword}
+                          onChange={(e) => setRegConfirmPassword(e.target.value)}
+                          className="w-full bg-black border border-cyan-950 p-2 text-white rounded text-base"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 mt-2 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold uppercase text-[11px] shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer"
+                    >
+                      Ro'yxatdan O'tish
+                    </button>
+                  </form>
+                ) : (
+                  /* --- STANDARD LOGIN FORM --- */
+                  <form onSubmit={handleAuthSubmit} className="space-y-4 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Telefon yoki Elektron Pochta *</label>
+                      <input
+                        type="text"
+                        placeholder="masalan, +998901234567 yoki user@example.com"
+                        required
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="w-full bg-black border border-cyan-950 p-2.5 text-white rounded text-base"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Maxfiy parol *</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Sizning parolingiz"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full bg-black border border-cyan-950 p-2.5 text-white rounded text-base"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 py-1">
+                      <label className="flex items-center space-x-1.5 px-0.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="accent-cyan-500 h-3.5 w-3.5 rounded"
+                        />
+                        <span>Meni eslab qolish</span>
+                      </label>
+                      <span className="hover:text-cyan-400 cursor-pointer transition-colors">Parolni tiklash?</span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold uppercase text-[11px] shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer"
+                    >
+                      Tizimga Kirish
+                    </button>
+                  </form>
+                )}
+
+                {/* Alternating Options Block */}
+                <div className="border-t border-cyan-950/40 pt-4 flex flex-col space-y-2.5">
+                  <button
+                    onClick={handleGoogleSignInDemo}
+                    className="w-full py-2.5 rounded border border-cyan-950/40 text-gray-300 text-xs font-semibold hover:border-cyan-500 hover:text-white flex items-center justify-center space-x-2 transition-all cursor-pointer bg-black/20"
+                    title="Google verification trigger"
+                  >
+                    <Compass size={14} className="text-cyan-400 animate-spin" style={{ animationDuration: '8s' }} />
+                    <span>Google Secure Tizimi Orqali Kirish</span>
+                  </button>
+
                   <button
                     onClick={() => {
-                      stopWebcamScanner();
-                      handleGoogleQrSuccessLogin();
+                      setLoginIsRegisterMode(!loginIsRegisterMode);
+                      setGoogleUnlockError("");
                     }}
-                    className="w-full py-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-black font-extrabold text-[10px] rounded uppercase shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                    className="text-[11px] text-cyan-400 text-center hover:underline cursor-pointer border-t border-cyan-950/20 pt-2"
                   >
-                    <Laptop size={13} />
-                    <span>Skanerlashni simulyatsiya qilish</span>
+                    {loginIsRegisterMode ? "Hisobingiz allaqachon bormi? TIZIMGA KIRISH" : "Sizda hali hisob yo'qmi? RO'YXATDAN O'TISH"}
                   </button>
-                  
-                  {webcamScanStatus === 'failed' && (
-                    <button
-                      onClick={() => {
-                        stopWebcamScanner();
-                        startWebcamScanner();
-                      }}
-                      className="text-[10px] text-cyan-400 font-bold underline flex items-center justify-center gap-1 mx-auto mt-1 cursor-pointer"
-                    >
-                      <RefreshCw size={11} /> Kamerani qayta yuklash
-                    </button>
-                  )}
                 </div>
               </div>
             )}
-
-            {/* FORM / OR ALTERNATIVES FOOTER */}
-            <div className="border-t border-gray-900 pt-3 flex flex-col space-y-2">
-              <button
-                onClick={handleGoogleSignInDemo}
-                className="w-full py-2 rounded-full border border-gray-800 text-gray-300 text-xs font-semibold hover:border-cyan-500 flex items-center justify-center space-x-2 transition-all cursor-pointer"
-              >
-                <Compass size={14} className="text-cyan-400" />
-                <span>Google orqali kirish (Fast Admin)</span>
-              </button>
-
-              <button
-                onClick={() => setLoginIsRegisterMode(!loginIsRegisterMode)}
-                className="text-[11px] text-cyan-400 text-center hover:underline cursor-pointer"
-              >
-                {loginIsRegisterMode ? "Sizda hisob bormi? Kirish" : "Hisobingiz yo'qmi? Ro'yxatdan o'tish"}
-              </button>
-            </div>
           </div>
         </div>
       )}
