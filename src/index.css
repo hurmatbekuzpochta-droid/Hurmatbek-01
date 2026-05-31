@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-neon: #06b6d4;
+  --color-neon-glow: #22d3ee;
+  
+  --animate-neon-pulse: neon-pulse 2s infinite alternate;
+}
+
+@keyframes neon-pulse {
+  from {
+    text-shadow: 0 0 4px #06b6d4, 0 0 12px rgba(6, 182, 212, 0.4);
+  }
+  to {
+    text-shadow: 0 0 12px #22d3ee, 0 0 24px rgba(34, 211, 238, 0.8), 0 0 36px rgba(6, 182, 212, 0.5);
+  }
+}
+
+/* Custom overlay style scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: #06b6d4;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0891b2;
+}
+
+body {
+  background-color: #030303;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 45%);
+  background-attachment: fixed;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* LIGHT MODE STYLES & OVERRIDES */
+html.light body {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 45%);
+  color: #1e293b;
+}
+
+html.light .bg-black,
+html.light .bg-\[\#050505\],
+html.light .bg-\[\#0a0a0a\],
+html.light .bg-\[\#0c0c0c\],
+html.light .bg-zinc-900,
+html.light .bg-zinc-950,
+html.light .bg-zinc-900\/5s,
+html.light .bg-black\/40 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-\[\#050505\]\/80,
+html.light .bg-black\/95,
+html.light .bg-\[\#0c0c0c\]\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-gray-100,
+html.light .text-gray-200,
+html.light .text-gray-300 {
+  color: #1e293b !important;
+}
+
+html.light .text-gray-400 {
+  color: #475569 !important;
+}
+
+html.light .text-gray-500,
+html.light .text-gray-600 {
+  color: #64748b !important;
+}
+
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-cyan-500\/20,
+html.light .border-cyan-500\/25,
+html.light .border-\[\#151515\],
+html.light .border-cyan-950,
+html.light .border-gray-850,
+html.light .border-gray-800,
+html.light .border-gray-900 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .divide-\[\#151515\] > * {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+html.light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+html.light .hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+html.light .hover\:bg-gray-800\/80:hover {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .bg-zinc-950\/40 {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+
+html.light .text-glow {
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.3) !important;
+}
+
+/* Make sticky header light background with border, and give it shadow */
+html.light header {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.15) !important;
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light header .text-white {
+  color: #0f172a !important;
+}
+
+html.light .bg-cyan-950\/40 {
+  background-color: rgba(6, 182, 212, 0.08) !important;
+}
+
+html.light input,
+html.light select {
+  background-color: #f1f5f9 !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+
+html.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Ensure detail page modal container isn't hidden or messed up */
+html.light .fixed.inset-0.bg-black\/95 {
+  background-color: rgba(15, 23, 42, 0.98) !important;
+}
+
+html.light .fixed.inset-0.bg-black\/95 .text-white {
+  color: #ffffff !important;
+}
+
+html.light .fixed.inset-0.bg-black\/95 .bg-\[\#0c0c0c\] {
+  background-color: #111827 !important;
+}
+
+.glow-glow {
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+}
+
+.glow-glow-hover:hover {
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
+}
+
+.text-glow {
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+}
+
+.glass {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-neon {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+/* HTML5 Video overriding rules */
+video::-webkit-media-controls {
+  display: flex !important;
+}
