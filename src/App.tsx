@@ -67,8 +67,12 @@ export default function App() {
 
   // Theme support (light/dark mode)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('theme');
-    return (saved as 'light' | 'dark') || 'dark';
+    try {
+      const saved = localStorage.getItem('theme');
+      return (saved as 'light' | 'dark') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
   });
 
   useEffect(() => {
@@ -78,7 +82,11 @@ export default function App() {
     } else {
       root.classList.remove('light');
     }
-    localStorage.setItem('theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch (e) {
+      // Iframe sandbox check fallback
+    }
   }, [theme]);
 
   const handleToggleTheme = () => {
